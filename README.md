@@ -1,38 +1,24 @@
-# create-svelte
+# Vite SSR eventemitter3 Transitive Dependency Reproduction
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte);
+To run
 
-## Creating a project
+1. pnpm i
+2. pnpm dev
+3. Open the browser
 
-If you're seeing this, you've probably already done this step. Congrats!
+Note that you can reproduce this with `yarn` as well if you prefer.
 
-```bash
-# create a new project in the current directory
-npm init svelte@next
+It appears that when included as a transitive dependency `eventemitter3` is not prebundled, and since it's a CommonJS package this causes problems. In the reproduction repository case it's being included through the `@solana/wallet-adapter-base` package.
 
-# create a new project in my-app
-npm init svelte@next my-app
+Using yarn we can add eventemitter3 to optimizeDeps.include, but with pnpm it's nested in some other directories, so that doesn't work and I get a "Failed to resolve force included dependency" error. I also tried "@solana/wallet-adapter-base > eventemitter3" but that didn't seem to do anything. 
+
+The eventemitter3 package does some unusual stuff at the end when it exposes the module:
+
+```
+if ('undefined' !== typeof module) {
+  module.exports = EventEmitter;
+}
 ```
 
-> Note: the `@next` is temporary
+And then when it actually runs, since it hasn't been converted to ESM `module` is undefined and it can't do anything.
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-Before creating a production version of your app, install an [adapter](https://kit.svelte.dev/docs#adapters) for your target environment. Then:
-
-```bash
-npm run build
-```
-
-> You can preview the built app with `npm run preview`, regardless of whether you installed an adapter. This should _not_ be used to serve your app in production.
